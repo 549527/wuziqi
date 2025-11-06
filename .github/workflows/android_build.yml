@@ -31,7 +31,7 @@ jobs:
         pip install buildozer pip
         pip install cython==0.29.36
 
-    # 3. Accept Android SDK Licenses (Fixes "license not accepted" error)
+    # 3. Accept Android SDK Licenses (Fixes initial "license not accepted" error)
     - name: Accept Android SDK Licenses
       run: |
         mkdir -p $ANDROID_HOME/licenses
@@ -50,7 +50,7 @@ jobs:
         
         # Check if the download file is actually a zip file (crude size check)
         FILE_SIZE=$(stat -c%s "$TOOLS_ZIP")
-        if [ "$FILE_SIZE" -lt 50000000 ]; then # SDK ZIP should be > 50MB. If < 50MB, it's likely an error page or corrupted.
+        if [ "$FILE_SIZE" -lt 50000000 ]; then # SDK ZIP should be > 50MB.
           echo "Error: Downloaded file size is too small ($FILE_SIZE bytes). It might be corrupted or an error page."
           exit 1
         fi
@@ -61,17 +61,26 @@ jobs:
         # Unzip
         unzip -q $TOOLS_ZIP -d $TOOLS_DIR/latest
         
-        # Move tools to the expected directory structure (cmdline-tools/latest/cmdline-tools/bin -> cmdline-tools/latest/bin)
+        # Move tools to the expected directory structure 
         mv $TOOLS_DIR/latest/cmdline-tools/* $TOOLS_DIR/latest/
         
         # Cleanup
         rm $TOOLS_ZIP
 
-    # 5. Run buildozer compilation
+    # 🌟 5. 新增步骤：强制接受所有 Build-Tools 许可证 🌟
+    - name: Force Accept All Licenses
+      run: |
+        # 将 sdkmanager 路径添加到 PATH
+        export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+        
+        # 强制接受所有缺失的许可证。'yes' 命令自动输入 'y'
+        yes | sdkmanager --licenses || true
+
+    # 6. Run buildozer compilation
     - name: Run Buildozer Android Debug
       run: buildozer android debug
 
-    # 6. Upload generated APK file as an artifact
+    # 7. Upload generated APK file as an artifact
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
