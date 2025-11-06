@@ -65,8 +65,8 @@ jobs:
         # Cleanup
         rm $TOOLS_ZIP
 
-    # 5. 关键步骤：修复 PATH 环境变量并预安装 Buildozer 依赖
-    - name: Force Accept Licenses and Pre-install Dependencies
+    # 5. 关键步骤：只修复 PATH 环境变量，移除所有手动下载（让 Buildozer 自己处理）
+    - name: Set SDK PATH Environment
       run: |
         # 修正：先在当前 Shell 中 export PATH，才能立即使用 sdkmanager
         SDK_BIN="$ANDROID_HOME/cmdline-tools/latest/bin"
@@ -75,22 +75,17 @@ jobs:
         # 同时，使用 GITHUB_PATH 确保其对后续步骤 (步骤 6) 也有效
         echo "$SDK_BIN" >> $GITHUB_PATH
         
-        # 强制接受所有缺失的许可证
+        # 强制接受所有缺失的许可证（这是唯一必须手动运行的命令）
         echo "Force accepting all Android SDK licenses..."
         yes | sdkmanager --licenses || true
 
-        # 🚨 关键修正：增强稳定性并安装已知可用版本。
-        echo "Pre-installing specific Build-Tools and dependencies..."
-        # 增加 --no_http_psk_download 标志以提高网络下载稳定性
-        sdkmanager --no_http_psk_download "platform-tools" "platforms;android-30" "build-tools;30.0.3" "build-tools;26.1.0"
-        
-    # 6. Run buildozer compilation (Added --no-setup to force use of pre-installed tools)
+    # 6. Run buildozer compilation (Removed --no-setup to allow Buildozer to download dependencies)
     - name: Run Buildozer Android Debug
       run: |
         # 增加一个短暂的等待，确保PATH等环境变量在新的步骤中完全刷新
         sleep 5
-        # 使用 --no-setup 标志，强制 Buildozer 跳过 SDK/NDK/Licenses的检查和下载
-        buildozer android debug --no-setup
+        # 允许 Buildozer 自己去下载缺失的依赖，但我们已经提供了 sdkmanager 的路径和许可证
+        buildozer android debug
 
     # 7. Upload generated APK file as an artifact
     - name: Upload APK Artifact
