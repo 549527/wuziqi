@@ -65,10 +65,10 @@ jobs:
         # Cleanup
         rm $TOOLS_ZIP
 
-    # 🌟 5. 关键步骤：修复 PATH 环境变量并预安装 Buildozer 依赖 🌟
+    # 5. 关键步骤：修复 PATH 环境变量并预安装 Buildozer 依赖
     - name: Force Accept Licenses and Pre-install Dependencies
       run: |
-        # 🌟 修正：先在当前 Shell 中 export PATH，才能立即使用 sdkmanager
+        # 修正：先在当前 Shell 中 export PATH，才能立即使用 sdkmanager
         SDK_BIN="$ANDROID_HOME/cmdline-tools/latest/bin"
         export PATH="$SDK_BIN:$PATH"
         
