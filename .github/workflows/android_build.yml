@@ -12,8 +12,8 @@ jobs:
     env:
       # Default Android SDK path used by Buildozer
       ANDROID_HOME: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
-      # SDK command-line tools URL
-      CMDLINE_TOOLS_URL: https://dl.google.com/android/repository/commandlinetools-linux-8551475_latest.zip
+      # SDK command-line tools URL (Updated to a known working path for version 11076708)
+      CMDLINE_TOOLS_URL: https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
 
     steps:
     - uses: actions/checkout@v4
@@ -38,19 +38,19 @@ jobs:
         echo "2433ddef7fe487ef9c12257c191a92e18ae5703f" > $ANDROID_HOME/licenses/android-sdk-license
         echo "84831b940e6990c46a6f1317565b535028883d6a" > $ANDROID_HOME/licenses/android-sdk-preview-license
         
-    # 🌟 4. Manually install SDK Command-Line Tools (Fixes "sdkmanager not installed" and download issues) 🌟
+    # 4. Manually install SDK Command-Line Tools (Fixes "sdkmanager not installed" and download issues)
     - name: Install Latest SDK Command-Line Tools
       run: |
         TOOLS_DIR=$ANDROID_HOME/cmdline-tools
         TOOLS_ZIP="cmdline-tools.zip"
         
-        # Use curl for a more robust download (shows progress, handles redirects, fails on HTTP errors)
-        echo "Downloading SDK Command-Line Tools..."
+        # Use curl for a more robust download
+        echo "Downloading SDK Command-Line Tools from updated URL..."
         curl -fL -o $TOOLS_ZIP $CMDLINE_TOOLS_URL
         
         # Check if the download file is actually a zip file (crude size check)
         FILE_SIZE=$(stat -c%s "$TOOLS_ZIP")
-        if [ "$FILE_SIZE" -lt 50000000 ]; then # SDK ZIP should be > 50MB. If < 50MB, it's likely an error page.
+        if [ "$FILE_SIZE" -lt 50000000 ]; then # SDK ZIP should be > 50MB. If < 50MB, it's likely an error page or corrupted.
           echo "Error: Downloaded file size is too small ($FILE_SIZE bytes). It might be corrupted or an error page."
           exit 1
         fi
@@ -61,7 +61,7 @@ jobs:
         # Unzip
         unzip -q $TOOLS_ZIP -d $TOOLS_DIR/latest
         
-        # Move tools to the expected directory structure
+        # Move tools to the expected directory structure (cmdline-tools/latest/cmdline-tools/bin -> cmdline-tools/latest/bin)
         mv $TOOLS_DIR/latest/cmdline-tools/* $TOOLS_DIR/latest/
         
         # Cleanup
