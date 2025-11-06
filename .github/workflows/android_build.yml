@@ -1,5 +1,8 @@
+# 文件名: .github/workflows/android_build.yml
+
 name: Android Build with Kivy-A.T.
 
+# 触发条件：当代码推送到 'main' 分支时，或手动点击运行时
 on:
   push:
     branches: [ main ]
@@ -9,50 +12,41 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    env:
-      ANDROID_HOME: /usr/local/lib/android/sdk
-      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-      PATH: /usr/local/lib/android/sdk/platform-tools:/usr/local/lib/android/sdk/cmdline-tools/latest/bin:${PATH}
-
     steps:
-    # 🔧 修复：提前安装 tar / git
-    - name: Ensure system dependencies
+    - uses: actions/checkout@v4
+
+    # 1. 安装 buildozer 运行环境 (已包含 openjdk-17-jdk)
+    - name: Set up Buildozer Environment
       run: |
         sudo apt update
-        sudo apt install -y tar gzip git unzip
+        sudo apt install -y build-essential python3-pip git openjdk-17-jdk
 
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-
-    - name: Install Buildozer Environment
-      run: |
-        sudo apt update
-        sudo apt install -y build-essential python3-pip openjdk-17-jdk
-
+    # 2. 安装 Python 依赖
     - name: Install Python Dependencies
       run: |
-        pip install --upgrade pip
-        pip install cython==0.29.36 buildozer
-        pip install -r requirements.txt
+        pip install buildozer pip
+        # Kivy/Buildozer 对 Cython 版本很敏感，使用稳定版本
+        pip install cython==0.29.36
 
-    - name: Install Android SDK Command Line Tools
+    # 🌟 关键修正步骤：手动设置 ANDROID_HOME 变量并接受许可证 🌟
+    # 这一步是解决 "license not accepted" 错误的根本。
+    - name: Accept Android SDK Licenses
       run: |
-        mkdir -p $ANDROID_HOME/cmdline-tools
-        cd $ANDROID_HOME/cmdline-tools
-        curl -o sdk-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-        unzip sdk-tools.zip -d latest
-        rm sdk-tools.zip
-        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
-        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;36.1.0"
+        # Buildozer 第一次运行时，SDK 会被下载到这个默认路径
+        export ANDROID_HOME="$HOME/.buildozer/android/platform/android-sdk"
+        
+        # 创建 licenses 目录
+        mkdir -p $ANDROID_HOME/licenses
+        
+        # 写入 SDK 许可证哈希，模拟手动点击 "Accept"
+        echo "2433ddef7fe487ef9c12257c191a92e18ae5703f" > $ANDROID_HOME/licenses/android-sdk-license
+        echo "84831b940e6990c46a6f1317565b535028883d6a" > $ANDROID_HOME/licenses/android-sdk-preview-license
 
+    # 3. 运行 buildozer 编译 (Buildozer 会自动下载并安装缺失的 SDK 组件)
     - name: Run Buildozer Android Debug
       run: buildozer android debug
 
+    # 4. 上传生成的 APK 文件
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
