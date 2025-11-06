@@ -79,9 +79,9 @@ jobs:
         echo "Force accepting all Android SDK licenses..."
         yes | sdkmanager --licenses || true
 
-        # 🚨 关键修正：预安装 Buildozer 抱怨找不到的特定 Build-Tools 版本
+        # 🚨 关键修正：移除不可用的 build-tools;36.1.0，只安装已知可用版本。
         echo "Pre-installing specific Build-Tools and dependencies..."
-        sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3" "build-tools;26.1.0" "build-tools;36.1.0"
+        sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3" "build-tools;26.1.0"
 
     # 6. Run buildozer compilation
     - name: Run Buildozer Android Debug
