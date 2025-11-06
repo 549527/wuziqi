@@ -22,7 +22,7 @@ jobs:
     - name: Set up Buildozer Environment
       run: |
         sudo apt update
-        # 安装构建依赖、Java、以及下载和解压工具
+        # Install build dependencies, Java, and necessary tools (curl, unzip)
         sudo apt install -y build-essential python3-pip git openjdk-17-jdk curl unzip
 
     # 2. Install Python dependencies
@@ -31,32 +31,40 @@ jobs:
         pip install buildozer pip
         pip install cython==0.29.36
 
-    # 3. Accept Android SDK Licenses (修复许可证问题)
+    # 3. Accept Android SDK Licenses (Fixes "license not accepted" error)
     - name: Accept Android SDK Licenses
       run: |
         mkdir -p $ANDROID_HOME/licenses
         echo "2433ddef7fe487ef9c12257c191a92e18ae5703f" > $ANDROID_HOME/licenses/android-sdk-license
         echo "84831b940e6990c46a6f1317565b535028883d6a" > $ANDROID_HOME/licenses/android-sdk-preview-license
         
-    # 4. Manually install SDK Command-Line Tools (修复 sdkmanager 找不到的问题)
+    # 🌟 4. Manually install SDK Command-Line Tools (Fixes "sdkmanager not installed" and download issues) 🌟
     - name: Install Latest SDK Command-Line Tools
       run: |
         TOOLS_DIR=$ANDROID_HOME/cmdline-tools
         TOOLS_ZIP="cmdline-tools.zip"
         
-        # 使用 curl 下载
-        curl -o $TOOLS_ZIP $CMDLINE_TOOLS_URL
+        # Use curl for a more robust download (shows progress, handles redirects, fails on HTTP errors)
+        echo "Downloading SDK Command-Line Tools..."
+        curl -fL -o $TOOLS_ZIP $CMDLINE_TOOLS_URL
         
-        # 创建目标目录结构
+        # Check if the download file is actually a zip file (crude size check)
+        FILE_SIZE=$(stat -c%s "$TOOLS_ZIP")
+        if [ "$FILE_SIZE" -lt 50000000 ]; then # SDK ZIP should be > 50MB. If < 50MB, it's likely an error page.
+          echo "Error: Downloaded file size is too small ($FILE_SIZE bytes). It might be corrupted or an error page."
+          exit 1
+        fi
+        
+        # Create target directory structure
         mkdir -p $TOOLS_DIR/latest
         
-        # 解压
+        # Unzip
         unzip -q $TOOLS_ZIP -d $TOOLS_DIR/latest
         
-        # 移动工具到 sdkmanager 期望的目录结构
+        # Move tools to the expected directory structure
         mv $TOOLS_DIR/latest/cmdline-tools/* $TOOLS_DIR/latest/
         
-        # 清理
+        # Cleanup
         rm $TOOLS_ZIP
 
     # 5. Run buildozer compilation
