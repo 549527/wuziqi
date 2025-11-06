@@ -83,10 +83,14 @@ jobs:
         echo "Pre-installing specific Build-Tools and dependencies..."
         # 增加 --no_http_psk_download 标志以提高网络下载稳定性
         sdkmanager --no_http_psk_download "platform-tools" "platforms;android-30" "build-tools;30.0.3" "build-tools;26.1.0"
-
-    # 6. Run buildozer compilation
+        
+    # 6. Run buildozer compilation (Added --no-setup to force use of pre-installed tools)
     - name: Run Buildozer Android Debug
-      run: buildozer android debug
+      run: |
+        # 增加一个短暂的等待，确保PATH等环境变量在新的步骤中完全刷新
+        sleep 5
+        # 使用 --no-setup 标志，强制 Buildozer 跳过 SDK/NDK/Licenses的检查和下载
+        buildozer android debug --no-setup
 
     # 7. Upload generated APK file as an artifact
     - name: Upload APK Artifact
