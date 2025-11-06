@@ -15,7 +15,14 @@ jobs:
       PATH: /usr/local/lib/android/sdk/platform-tools:/usr/local/lib/android/sdk/cmdline-tools/latest/bin:${PATH}
 
     steps:
-    - uses: actions/checkout@v4
+    # 🔧 修复：提前安装 tar / git
+    - name: Ensure system dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y tar gzip git unzip
+
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -25,7 +32,7 @@ jobs:
     - name: Install Buildozer Environment
       run: |
         sudo apt update
-        sudo apt install -y build-essential python3-pip git openjdk-17-jdk unzip
+        sudo apt install -y build-essential python3-pip openjdk-17-jdk
 
     - name: Install Python Dependencies
       run: |
