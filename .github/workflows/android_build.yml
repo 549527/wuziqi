@@ -65,19 +65,24 @@ jobs:
         # Cleanup
         rm $TOOLS_ZIP
 
-    # 🌟 5. 关键步骤：强制接受许可证并预安装 Buildozer 依赖 🌟
+    # 🌟 5. 关键步骤：修复 PATH 环境变量并预安装 Buildozer 依赖 🌟
     - name: Force Accept Licenses and Pre-install Dependencies
       run: |
-        # ⚠️ 关键：将 sdkmanager 路径添加到 PATH，并使用 GITHUB_PATH 确保其对后续步骤也有效 ⚠️
+        # 🌟 修正：先在当前 Shell 中 export PATH，才能立即使用 sdkmanager
         SDK_BIN="$ANDROID_HOME/cmdline-tools/latest/bin"
+        export PATH="$SDK_BIN:$PATH"
+        
+        # 同时，使用 GITHUB_PATH 确保其对后续步骤 (步骤 6) 也有效
         echo "$SDK_BIN" >> $GITHUB_PATH
         
         # 强制接受所有缺失的许可证
         echo "Force accepting all Android SDK licenses..."
+        # 这里的 sdkmanager 现在应该能找到
         yes | sdkmanager --licenses || true
 
         # 预安装 Buildozer 最常依赖的组件，解决 Aidl 缺失和 Build-Tools 许可证问题
         echo "Pre-installing common Buildozer dependencies (Platform-Tools & Build-Tools)..."
+        # 这里的 sdkmanager 也应该能找到
         sdkmanager "platform-tools" "build-tools;30.0.3" "platforms;android-30"
 
     # 6. Run buildozer compilation
