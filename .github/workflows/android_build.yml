@@ -11,11 +11,16 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    
+    # 🌟 关键修正：在 Job 级别设置 ANDROID_HOME 环境变量 🌟
+    env:
+      # Buildozer 默认的 Android SDK 路径
+      ANDROID_HOME: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
 
     steps:
     - uses: actions/checkout@v4
 
-    # 1. 安装 buildozer 运行环境 (已包含 openjdk-17-jdk)
+    # 1. 安装 buildozer 运行环境
     - name: Set up Buildozer Environment
       run: |
         sudo apt update
@@ -25,30 +30,23 @@ jobs:
     - name: Install Python Dependencies
       run: |
         pip install buildozer pip
-        # Kivy/Buildozer 对 Cython 版本很敏感，使用稳定版本
         pip install cython==0.29.36
 
-    # 3. 接受 Android SDK 许可证 (解决之前的 'license not accepted' 错误)
+    # 3. 接受 Android SDK 许可证 (依赖于上面设置的 ANDROID_HOME)
     - name: Accept Android SDK Licenses
       run: |
-        # Buildozer 第一次运行时，SDK 会被下载到这个默认路径
-        export ANDROID_HOME="$HOME/.buildozer/android/platform/android-sdk"
-        
         # 创建 licenses 目录
         mkdir -p $ANDROID_HOME/licenses
         
-        # 写入 SDK 许可证哈希，模拟手动点击 "Accept"
+        # 写入 SDK 许可证哈希
         echo "2433ddef7fe487ef9c12257c191a92e18ae5703f" > $ANDROID_HOME/licenses/android-sdk-license
         echo "84831b940e6990c46a6f1317565b535028883d6a" > $ANDROID_HOME/licenses/android-sdk-preview-license
         
-    # 🌟 4. 新增步骤：强制安装最新的 SDK 命令行工具 (解决 'sdkmanager not installed' 错误) 🌟
+    # 4. 强制安装最新的 SDK 命令行工具 (解决 'sdkmanager not installed' 错误)
     - name: Install Latest SDK Command-Line Tools
       run: |
-        # 再次确保 ANDROID_HOME 变量在当前 Shell 中可用
-        export ANDROID_HOME="$HOME/.buildozer/android/platform/android-sdk"
-        
-        # 这一步是修复 Buildozer 在新版 Android SDK 结构中找不到 sdkmanager 的问题
-        # 下载并解压最新的命令行工具包 (这是 Google 官方的下载链接)
+        # 这一步修复 Buildozer 在新版 Android SDK 结构中找不到 sdkmanager 的问题
+        # 下载并解压最新的命令行工具包
         wget -q https://dl.google.com/android/repository/commandlinetools-linux-8551475_latest.zip -O cmdline-tools.zip
         
         # 创建目标目录并解压
