@@ -12,57 +12,58 @@ jobs:
     env:
       # Default Android SDK path used by Buildozer
       ANDROID_HOME: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
+      # SDK command-line tools URL
+      CMDLINE_TOOLS_URL: https://dl.google.com/android/repository/commandlinetools-linux-8551475_latest.zip
 
     steps:
     - uses: actions/checkout@v4
 
-    # Install Buildozer environment dependencies
+    # 1. Install Buildozer environment dependencies (includes git, python, openjdk, curl, unzip)
     - name: Set up Buildozer Environment
       run: |
         sudo apt update
-        sudo apt install -y build-essential python3-pip git openjdk-17-jdk
+        # 安装构建依赖、Java、以及下载和解压工具
+        sudo apt install -y build-essential python3-pip git openjdk-17-jdk curl unzip
 
-    # Ensure command-line tools (wget, unzip) are installed for later steps
-    - name: Ensure Wget and Unzip Tools
-      run: |
-        sudo apt install -y wget unzip
-
-    # Install Python dependencies
+    # 2. Install Python dependencies
     - name: Install Python Dependencies
       run: |
         pip install buildozer pip
         pip install cython==0.29.36
 
-    # Accept Android SDK Licenses (to fix "license not accepted" error)
+    # 3. Accept Android SDK Licenses (修复许可证问题)
     - name: Accept Android SDK Licenses
       run: |
         mkdir -p $ANDROID_HOME/licenses
         echo "2433ddef7fe487ef9c12257c191a92e18ae5703f" > $ANDROID_HOME/licenses/android-sdk-license
         echo "84831b940e6990c46a6f1317565b535028883d6a" > $ANDROID_HOME/licenses/android-sdk-preview-license
         
-    # Manually install SDK Command-Line Tools (to fix "sdkmanager not installed" error)
+    # 4. Manually install SDK Command-Line Tools (修复 sdkmanager 找不到的问题)
     - name: Install Latest SDK Command-Line Tools
       run: |
+        TOOLS_DIR=$ANDROID_HOME/cmdline-tools
         TOOLS_ZIP="cmdline-tools.zip"
         
-        # Download and unzip the latest command-line tools bundle
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-8551475_latest.zip -O $TOOLS_ZIP
+        # 使用 curl 下载
+        curl -o $TOOLS_ZIP $CMDLINE_TOOLS_URL
         
-        # Create target directory and unzip
-        mkdir -p $ANDROID_HOME/cmdline-tools/latest
-        unzip -q $TOOLS_ZIP -d $ANDROID_HOME/cmdline-tools/latest/
+        # 创建目标目录结构
+        mkdir -p $TOOLS_DIR/latest
         
-        # Move tools to the expected directory structure for sdkmanager
-        mv $ANDROID_HOME/cmdline-tools/latest/cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
+        # 解压
+        unzip -q $TOOLS_ZIP -d $TOOLS_DIR/latest
         
-        # Cleanup
+        # 移动工具到 sdkmanager 期望的目录结构
+        mv $TOOLS_DIR/latest/cmdline-tools/* $TOOLS_DIR/latest/
+        
+        # 清理
         rm $TOOLS_ZIP
 
-    # Run buildozer compilation
+    # 5. Run buildozer compilation
     - name: Run Buildozer Android Debug
       run: buildozer android debug
 
-    # Upload generated APK file as an artifact
+    # 6. Upload generated APK file as an artifact
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
