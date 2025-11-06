@@ -15,7 +15,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # 1. 安装 buildozer 运行环境
+    # 1. 安装 buildozer 运行环境 (已包含 openjdk-17-jdk)
     - name: Set up Buildozer Environment
       run: |
         sudo apt update
@@ -28,7 +28,17 @@ jobs:
         # Kivy/Buildozer 对 Cython 版本很敏感，使用稳定版本
         pip install cython==0.29.36
 
-    # 3. 运行 buildozer 编译
+    # 🌟 修正并新增的步骤：接受 Android SDK 许可证 🌟
+    # 这一步必须在 Buildozer 尝试下载 SDK 之前完成，以解决您遇到的 "license is not accepted" 错误。
+    - name: Accept Android SDK Licenses
+      run: |
+        # 创建 licenses 目录
+        mkdir -p $ANDROID_HOME/licenses
+        # 写入 SDK 许可证哈希
+        echo "2433ddef7fe487ef9c12257c191a92e18ae5703f" > $ANDROID_HOME/licenses/android-sdk-license
+        echo "84831b940e6990c46a6f1317565b535028883d6a" > $ANDROID_HOME/licenses/android-sdk-preview-license
+
+    # 3. 运行 buildozer 编译 (Buildozer 会自动下载并安装缺失的 SDK 组件)
     - name: Run Buildozer Android Debug
       run: buildozer android debug
 
