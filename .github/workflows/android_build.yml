@@ -79,16 +79,16 @@ jobs:
         echo "Force accepting all Android SDK licenses..."
         yes | sdkmanager --licenses || true
 
-        # 🚨 关键修正：移除不可用的 build-tools;36.1.0，只安装已知可用版本。
+        # 🚨 关键修正：增强稳定性并安装已知可用版本。
         echo "Pre-installing specific Build-Tools and dependencies..."
-        sdkmanager "platform-tools" "platforms;android-30" "build-tools;30.0.3" "build-tools;26.1.0"
+        # 增加 --no_http_psk_download 标志以提高网络下载稳定性
+        sdkmanager --no_http_psk_download "platform-tools" "platforms;android-30" "build-tools;30.0.3" "build-tools;26.1.0"
 
     # 6. Run buildozer compilation
     - name: Run Buildozer Android Debug
       run: buildozer android debug
 
     # 7. Upload generated APK file as an artifact
-    - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: android-debug-apk
