@@ -28,8 +28,7 @@ jobs:
         # Kivy/Buildozer 对 Cython 版本很敏感，使用稳定版本
         pip install cython==0.29.36
 
-    # 🌟 关键修正步骤：手动设置 ANDROID_HOME 变量并接受许可证 🌟
-    # 这一步是解决 "license not accepted" 错误的根本。
+    # 3. 接受 Android SDK 许可证 (解决之前的 'license not accepted' 错误)
     - name: Accept Android SDK Licenses
       run: |
         # Buildozer 第一次运行时，SDK 会被下载到这个默认路径
@@ -41,12 +40,29 @@ jobs:
         # 写入 SDK 许可证哈希，模拟手动点击 "Accept"
         echo "2433ddef7fe487ef9c12257c191a92e18ae5703f" > $ANDROID_HOME/licenses/android-sdk-license
         echo "84831b940e6990c46a6f1317565b535028883d6a" > $ANDROID_HOME/licenses/android-sdk-preview-license
+        
+    # 🌟 4. 新增步骤：强制安装最新的 SDK 命令行工具 (解决 'sdkmanager not installed' 错误) 🌟
+    - name: Install Latest SDK Command-Line Tools
+      run: |
+        # 再次确保 ANDROID_HOME 变量在当前 Shell 中可用
+        export ANDROID_HOME="$HOME/.buildozer/android/platform/android-sdk"
+        
+        # 这一步是修复 Buildozer 在新版 Android SDK 结构中找不到 sdkmanager 的问题
+        # 下载并解压最新的命令行工具包 (这是 Google 官方的下载链接)
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-8551475_latest.zip -O cmdline-tools.zip
+        
+        # 创建目标目录并解压
+        mkdir -p $ANDROID_HOME/cmdline-tools/latest
+        unzip -q cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools/latest/
+        
+        # 移动工具到 sdkmanager 期望的目录结构
+        mv $ANDROID_HOME/cmdline-tools/latest/cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
 
-    # 3. 运行 buildozer 编译 (Buildozer 会自动下载并安装缺失的 SDK 组件)
+    # 5. 运行 buildozer 编译
     - name: Run Buildozer Android Debug
       run: buildozer android debug
 
-    # 4. 上传生成的 APK 文件
+    # 6. 上传生成的 APK 文件
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
