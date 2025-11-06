@@ -1,0 +1,40 @@
+# 文件名: .github/workflows/android_build.yml
+
+name: Android Build with Kivy-A.T.
+
+# 触发条件：当代码推送到 'main' 分支时，或手动点击运行时
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # 1. 安装 buildozer 运行环境
+    - name: Set up Buildozer Environment
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential python3-pip git openjdk-17-jdk
+
+    # 2. 安装 Python 依赖
+    - name: Install Python Dependencies
+      run: |
+        pip install buildozer pip
+        # Kivy/Buildozer 对 Cython 版本很敏感，使用稳定版本
+        pip install cython==0.29.36
+
+    # 3. 运行 buildozer 编译
+    - name: Run Buildozer Android Debug
+      run: buildozer android debug
+
+    # 4. 上传生成的 APK 文件
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-debug-apk
+        path: bin/*.apk
