@@ -12,7 +12,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     
-    # 🌟 关键修正：在 Job 级别设置 ANDROID_HOME 环境变量 🌟
+    # 关键修正：在 Job 级别设置 ANDROID_HOME 环境变量
     env:
       # Buildozer 默认的 Android SDK 路径
       ANDROID_HOME: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
@@ -20,11 +20,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # 1. 安装 buildozer 运行环境
+    # 1. 安装 buildozer 运行环境 (包括 openjdk-17-jdk)
     - name: Set up Buildozer Environment
       run: |
         sudo apt update
         sudo apt install -y build-essential python3-pip git openjdk-17-jdk
+
+    # 🌟 新增步骤：确保下载和解压工具存在 🌟
+    - name: Ensure Wget and Unzip Tools
+      run: |
+        # 确保在运行 wget 和 unzip 之前，它们已经被安装
+        sudo apt install -y wget unzip
 
     # 2. 安装 Python 依赖
     - name: Install Python Dependencies
@@ -32,7 +38,7 @@ jobs:
         pip install buildozer pip
         pip install cython==0.29.36
 
-    # 3. 接受 Android SDK 许可证 (依赖于上面设置的 ANDROID_HOME)
+    # 3. 接受 Android SDK 许可证 (解决 'license not accepted' 错误)
     - name: Accept Android SDK Licenses
       run: |
         # 创建 licenses 目录
@@ -46,15 +52,25 @@ jobs:
     - name: Install Latest SDK Command-Line Tools
       run: |
         # 这一步修复 Buildozer 在新版 Android SDK 结构中找不到 sdkmanager 的问题
-        # 下载并解压最新的命令行工具包
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-8551475_latest.zip -O cmdline-tools.zip
         
-        # 创建目标目录并解压
+        # 目标下载文件名
+        TOOLS_ZIP="cmdline-tools.zip"
+        
+        # 下载并解压最新的命令行工具包 (Google 官方链接)
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-8551475_latest.zip -O $TOOLS_ZIP
+        
+        # 创建目标目录
         mkdir -p $ANDROID_HOME/cmdline-tools/latest
-        unzip -q cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools/latest/
+        
+        # 解压到目标目录
+        unzip -q $TOOLS_ZIP -d $ANDROID_HOME/cmdline-tools/latest/
         
         # 移动工具到 sdkmanager 期望的目录结构
         mv $ANDROID_HOME/cmdline-tools/latest/cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
+        
+        # 清理
+        rm $TOOLS_ZIP
+
 
     # 5. 运行 buildozer 编译
     - name: Run Buildozer Android Debug
