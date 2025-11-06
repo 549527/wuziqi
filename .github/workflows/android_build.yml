@@ -12,7 +12,7 @@ jobs:
     env:
       # Default Android SDK path used by Buildozer
       ANDROID_HOME: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
-      # SDK command-line tools URL (Updated to a known working path for version 11076708)
+      # SDK command-line tools URL (Updated to a known working path)
       CMDLINE_TOOLS_URL: https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
 
     steps:
@@ -38,27 +38,25 @@ jobs:
         echo "2433ddef7fe487ef9c12257c191a92e18ae5703f" > $ANDROID_HOME/licenses/android-sdk-license
         echo "84831b940e6990c46a6f1317565b535028883d6a" > $ANDROID_HOME/licenses/android-sdk-preview-license
         
-    # 4. Manually install SDK Command-Line Tools (Fixes "sdkmanager not installed" and download issues)
+    # 4. Manually install SDK Command-Line Tools (Fixes "sdkmanager not installed")
     - name: Install Latest SDK Command-Line Tools
       run: |
         TOOLS_DIR=$ANDROID_HOME/cmdline-tools
         TOOLS_ZIP="cmdline-tools.zip"
         
         # Use curl for a more robust download
-        echo "Downloading SDK Command-Line Tools from updated URL..."
+        echo "Downloading SDK Command-Line Tools..."
         curl -fL -o $TOOLS_ZIP $CMDLINE_TOOLS_URL
         
-        # Check if the download file is actually a zip file (crude size check)
+        # Crude size check
         FILE_SIZE=$(stat -c%s "$TOOLS_ZIP")
-        if [ "$FILE_SIZE" -lt 50000000 ]; then # SDK ZIP should be > 50MB.
+        if [ "$FILE_SIZE" -lt 50000000 ]; then 
           echo "Error: Downloaded file size is too small ($FILE_SIZE bytes). It might be corrupted or an error page."
           exit 1
         fi
         
-        # Create target directory structure
+        # Create target directory structure and unzip
         mkdir -p $TOOLS_DIR/latest
-        
-        # Unzip
         unzip -q $TOOLS_ZIP -d $TOOLS_DIR/latest
         
         # Move tools to the expected directory structure 
@@ -67,14 +65,20 @@ jobs:
         # Cleanup
         rm $TOOLS_ZIP
 
-    # 🌟 5. 新增步骤：强制接受所有 Build-Tools 许可证 🌟
-    - name: Force Accept All Licenses
+    # 🌟 5. 关键步骤：强制接受许可证并预安装 Buildozer 依赖 🌟
+    - name: Force Accept Licenses and Pre-install Dependencies
       run: |
-        # 将 sdkmanager 路径添加到 PATH
-        export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+        # ⚠️ 关键：将 sdkmanager 路径添加到 PATH，并使用 GITHUB_PATH 确保其对后续步骤也有效 ⚠️
+        SDK_BIN="$ANDROID_HOME/cmdline-tools/latest/bin"
+        echo "$SDK_BIN" >> $GITHUB_PATH
         
-        # 强制接受所有缺失的许可证。'yes' 命令自动输入 'y'
+        # 强制接受所有缺失的许可证
+        echo "Force accepting all Android SDK licenses..."
         yes | sdkmanager --licenses || true
+
+        # 预安装 Buildozer 最常依赖的组件，解决 Aidl 缺失和 Build-Tools 许可证问题
+        echo "Pre-installing common Buildozer dependencies (Platform-Tools & Build-Tools)..."
+        sdkmanager "platform-tools" "build-tools;30.0.3" "platforms;android-30"
 
     # 6. Run buildozer compilation
     - name: Run Buildozer Android Debug
